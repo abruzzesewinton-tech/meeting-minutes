@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>会议声线人工复核</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif;
+      --ink: #1d2924;
+      --muted: #66716c;
+      --paper: #f4f3ee;
+      --card: #ffffff;
+      --green: #315e44;
+      --green-soft: #eaf2ed;
+      --line: #d9ddd8;
+      --warn: #805b17;
+      --warn-soft: #fff7dd;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); }
+    main { max-width: 880px; margin: 0 auto; padding: 28px 18px 88px; }
+    h1 { margin: 0 0 8px; font-size: clamp(25px, 4vw, 34px); letter-spacing: -.02em; }
+    .meta, .instructions { color: var(--muted); line-height: 1.7; }
+    .instructions {
+      margin: 18px 0;
+      padding: 14px 16px;
+      background: var(--warn-soft);
+      border: 1px solid #eadcae;
+      border-radius: 12px;
+      color: #5e4a20;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin: 18px 0 8px;
+    }
+    .progress-track {
+      flex: 1 1 260px;
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e2e4e1;
+    }
+    .progress-bar { width: 0; height: 100%; background: var(--green); transition: width .2s ease; }
+    .progress-text { color: var(--muted); min-width: 92px; font-size: 14px; }
+    select {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      background: white;
+      color: var(--ink);
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+    .card {
+      margin: 14px 0;
+      padding: 18px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      box-shadow: 0 2px 14px rgba(18, 38, 28, .035);
+    }
+    .card-head { display: flex; gap: 12px; justify-content: space-between; align-items: start; }
+    .card h2 { margin: 0; font-size: 18px; }
+    .topic { margin: 5px 0 0; color: var(--muted); line-height: 1.55; }
+    .context { margin: 10px 0 0; padding: 9px 11px; background: #f6f7f5; border-radius: 9px; color: #4f5c56; line-height: 1.55; font-size: 14px; }
+    .done-mark { display: none; color: var(--green); font-weight: 650; white-space: nowrap; }
+    .card.complete .done-mark { display: inline; }
+    audio { width: 100%; margin: 15px 0 8px; }
+    fieldset { border: 0; padding: 0; margin: 14px 0 0; }
+    legend { padding: 0; margin-bottom: 8px; font-weight: 650; }
+    .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+    .choice {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      min-height: 46px;
+      padding: 10px;
+      border: 1px solid #e2e4e1;
+      border-radius: 10px;
+      cursor: pointer;
+      line-height: 1.4;
+    }
+    .choice:has(input:checked) { border-color: var(--green); background: var(--green-soft); }
+    .choice input { margin-top: 3px; }
+    .choice small { display: block; color: var(--muted); margin-top: 2px; }
+    .actions {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 10;
+      padding: 12px 18px;
+      border-top: 1px solid var(--line);
+      background: rgba(244, 243, 238, .96);
+      backdrop-filter: blur(10px);
+    }
+    .actions-inner { max-width: 880px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 15px;
+      font-size: 15px;
+      cursor: pointer;
+      background: #dde1de;
+      color: var(--ink);
+    }
+    button.primary { background: var(--green); color: white; }
+    button.danger { margin-left: auto; color: #7d342e; background: #f3e6e4; }
+    #status { color: var(--muted); font-size: 14px; }
+    dialog { width: min(760px, calc(100vw - 32px)); border: 0; border-radius: 14px; padding: 0; box-shadow: 0 18px 70px rgba(0,0,0,.28); }
+    dialog::backdrop { background: rgba(20, 28, 24, .48); }
+    .dialog-body { padding: 18px; }
+    pre { max-height: 50vh; overflow: auto; white-space: pre-wrap; background: #18211d; color: #eff4f1; border-radius: 10px; padding: 14px; }
+    .error { margin-top: 20px; padding: 16px; border-radius: 12px; color: #7a2f2a; background: #f9e9e7; }
+    @media (max-width: 600px) {
+      main { padding-left: 12px; padding-right: 12px; }
+      .card { padding: 15px; }
+      .actions-inner button { flex: 1 1 auto; }
+      button.danger { margin-left: 0; }
+    }
+  </style>
+  <script src="review-data.js"></script>
+</head>
+<body>
+<main>
+  <header id="header"></header>
+  <div class="toolbar" id="toolbar" hidden>
+    <div class="progress-track" aria-label="完成进度"><div class="progress-bar" id="progressBar"></div></div>
+    <span class="progress-text" id="progressText"></span>
+    <label>播放速度
+      <select id="speed">
+        <option value="0.8">0.8×</option>
+        <option value="1" selected>1.0×</option>
+        <option value="1.25">1.25×</option>
+        <option value="1.5">1.5×</option>
+      </select>
+    </label>
+  </div>
+  <section id="items"></section>
+  <div id="fatal" class="error" hidden></div>
+</main>
+
+<div class="actions" id="actions" hidden>
+  <div class="actions-inner">
+    <button class="primary" id="generate" type="button">检查并生成回执</button>
+    <button id="copy" type="button">复制 JSON</button>
+    <button id="download" type="button">下载 JSON</button>
+    <span id="status" role="status"></span>
+    <button class="danger" id="reset" type="button">清空本页选择</button>
+  </div>
+</div>
+
+<dialog id="resultDialog">
+  <div class="dialog-body">
+    <h2>标准复核回执</h2>
+    <p>复制后粘贴回会议纪要任务即可。</p>
+    <pre id="result"></pre>
+    <button id="closeDialog" type="button">关闭</button>
+  </div>
+</dialog>
+
+<script>
+(() => {
+  const pack = window.MEETING_REVIEW_PACK;
+  const fatal = document.querySelector("#fatal");
+  if (!pack || !Array.isArray(pack.items) || !Array.isArray(pack.questions)) {
+    fatal.hidden = false;
+    fatal.textContent = "复核数据未加载。请确认 index.html、review-data.js 和 clips 文件夹在同一目录。";
+    return;
+  }
+
+  document.title = pack.title || "会议声线人工复核";
+  const storageKey = `meeting-review:${pack.meeting_id}:${pack.review_manifest_sha256}`;
+  const header = document.querySelector("#header");
+  header.innerHTML = `
+    <h1>${escapeHtml(pack.title)}</h1>
+    <div class="meta">会议编号：${escapeHtml(pack.meeting_id)}　·　复核类型：${escapeHtml(pack.review_kind)}</div>
+    <div class="instructions">${escapeHtml(pack.instructions).replaceAll("\\n", "<br>")}</div>
+  `;
+
+  const itemsRoot = document.querySelector("#items");
+  for (const item of pack.items) {
+    const card = document.createElement("article");
+    card.className = "card";
+    card.dataset.item = item.id;
+    const questions = pack.questions.map(question => {
+      const choices = question.choices.map(choice => `
+        <label class="choice">
+          <input type="radio" name="${attr(item.id)}--${attr(question.id)}" value="${attr(choice.value)}">
+          <span>${escapeHtml(choice.label)}${choice.help ? `<small>${escapeHtml(choice.help)}</small>` : ""}</span>
+        </label>
+      `).join("");
+      return `
+        <fieldset data-question="${attr(question.id)}">
+          <legend>${escapeHtml(question.prompt)}${question.required ? "（必选）" : ""}</legend>
+          <div class="choices">${choices}</div>
+        </fieldset>
+      `;
+    }).join("");
+    card.innerHTML = `
+      <div class="card-head">
+        <div>
+          <h2>${escapeHtml(item.id)}</h2>
+          <div class="topic">${escapeHtml(item.topic || "")}</div>
+        </div>
+        <span class="done-mark">已完成</span>
+      </div>
+      ${item.context ? `<div class="context">${escapeHtml(item.context)}</div>` : ""}
+      <audio controls preload="metadata" src="${attr(item.audio)}"></audio>
+      ${questions}
+    `;
+    itemsRoot.appendChild(card);
+  }
+
+  document.querySelector("#toolbar").hidden = false;
+  document.querySelector("#actions").hidden = false;
+
+  function escapeHtml(value) {
+    return String(value ?? "").replace(/[&<>"']/g, char => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+    }[char]));
+  }
+  function attr(value) { return escapeHtml(value); }
+  function requiredQuestions() { return pack.questions.filter(question => question.required); }
+  function readAnswers() {
+    const answers = {};
+    for (const item of pack.items) {
+      answers[item.id] = {};
+      for (const question of pack.questions) {
+        const checked = document.querySelector(`input[name="${CSS.escape(item.id)}--${CSS.escape(question.id)}"]:checked`);
+        if (checked) answers[item.id][question.id] = checked.value;
+      }
+    }
+    return answers;
+  }
+  function missingAnswers(answers) {
+    const missing = [];
+    for (const item of pack.items) {
+      for (const question of requiredQuestions()) {
+        if (!answers[item.id]?.[question.id]) missing.push(`${item.id}/${question.prompt}`);
+      }
+    }
+    return missing;
+  }
+  function payload() {
+    return {
+      schema_version: 1,
+      protocol: "meeting-voice-review/v1",
+      task_id: pack.task_id,
+      meeting_id: pack.meeting_id,
+      review_kind: pack.review_kind,
+      review_manifest_sha256: pack.review_manifest_sha256,
+      answers: readAnswers()
+    };
+  }
+  function updateProgress() {
+    const answers = readAnswers();
+    const required = requiredQuestions().length * pack.items.length;
+    const completed = pack.items.reduce((count, item) => {
+      const itemDone = requiredQuestions().every(question => answers[item.id]?.[question.id]);
+      document.querySelector(`[data-item="${CSS.escape(item.id)}"]`).classList.toggle("complete", itemDone);
+      return count + (itemDone ? requiredQuestions().length : 0);
+    }, 0);
+    const percent = required ? Math.round(completed / required * 100) : 100;
+    document.querySelector("#progressBar").style.width = `${percent}%`;
+    document.querySelector("#progressText").textContent = `${completed}/${required} 已完成`;
+    localStorage.setItem(storageKey, JSON.stringify(answers));
+  }
+  function restore() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      for (const [itemId, values] of Object.entries(saved)) {
+        for (const [questionId, value] of Object.entries(values || {})) {
+          const input = document.querySelector(`input[name="${CSS.escape(itemId)}--${CSS.escape(questionId)}"][value="${CSS.escape(value)}"]`);
+          if (input) input.checked = true;
+        }
+      }
+    } catch (_) {}
+    updateProgress();
+  }
+  function buildText(showDialog = true) {
+    const data = payload();
+    const missing = missingAnswers(data.answers);
+    if (missing.length) {
+      document.querySelector("#status").textContent = `还缺 ${missing.length} 项：${missing.slice(0, 3).join("、")}${missing.length > 3 ? "…" : ""}`;
+      const first = missing[0].split("/")[0];
+      document.querySelector(`[data-item="${CSS.escape(first)}"]`)?.scrollIntoView({behavior: "smooth", block: "center"});
+      return null;
+    }
+    const text = JSON.stringify(data, null, 2);
+    document.querySelector("#result").textContent = text;
+    document.querySelector("#status").textContent = "回执完整";
+    if (showDialog) document.querySelector("#resultDialog").showModal();
+    return text;
+  }
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (_) {
+      const area = document.createElement("textarea");
+      area.value = text;
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+  }
+
+  document.querySelectorAll('input[type="radio"]').forEach(input => input.addEventListener("change", updateProgress));
+  document.querySelector("#speed").addEventListener("change", event => {
+    document.querySelectorAll("audio").forEach(audio => { audio.playbackRate = Number(event.target.value); });
+  });
+  document.querySelector("#generate").addEventListener("click", () => buildText(true));
+  document.querySelector("#copy").addEventListener("click", async () => {
+    const text = buildText(false);
+    if (!text) return;
+    await copyText(text);
+    document.querySelector("#status").textContent = "JSON 已复制";
+  });
+  document.querySelector("#download").addEventListener("click", () => {
+    const text = buildText(false);
+    if (!text) return;
+    const blob = new Blob([text + "\\n"], {type: "application/json"});
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${pack.meeting_id}-${pack.review_kind}-response.json`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    document.querySelector("#status").textContent = "JSON 已下载";
+  });
+  document.querySelector("#reset").addEventListener("click", () => {
+    if (!confirm("确定清空本页全部选择吗？")) return;
+    document.querySelectorAll('input[type="radio"]').forEach(input => { input.checked = false; });
+    localStorage.removeItem(storageKey);
+    updateProgress();
+    document.querySelector("#status").textContent = "已清空";
+  });
+  document.querySelector("#closeDialog").addEventListener("click", () => document.querySelector("#resultDialog").close());
+  restore();
+})();
+</script>
+</body>
+</html>

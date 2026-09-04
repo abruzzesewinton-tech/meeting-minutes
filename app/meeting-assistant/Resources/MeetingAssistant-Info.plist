@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>zh_CN</string>
+    <key>CFBundleDisplayName</key>
+    <string>会议助手</string>
+    <key>CFBundleExecutable</key>
+    <string>会议助手</string>
+    <key>CFBundleIconFile</key>
+    <string>MeetingAssistant</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.example.joyconvoice.meetingassistant</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>会议助手</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.4</string>
+    <key>CFBundleVersion</key>
+	<string>12</string>
+    <key>LSApplicationCategoryType</key>
+    <string>public.app-category.productivity</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>13.0</string>
+    <key>LSMultipleInstancesProhibited</key>
+    <true/>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+    <key>NSMicrophoneUsageDescription</key>
+    <string>会议助手需要使用当前系统输入设备录制会议原始音频，音频仅保存在本机。</string>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <key>JoyConProjectPath</key>
+    <string>__JOYCON_PROJECT_PATH__</string>
+</dict>
+</plist>

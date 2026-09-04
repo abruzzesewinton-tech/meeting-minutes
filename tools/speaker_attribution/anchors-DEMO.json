@@ -1,0 +1,36 @@
+{
+  "demo_only": true,
+  "notice": "Synthetic structure only. Not enrollment or human confirmation.",
+  "persons": [
+    {
+      "name": "我",
+      "anchors": [
+        {
+          "audio_file": "/path/to/DEMO-NOT-REAL.wav",
+          "start": 0.0,
+          "end": 2.0
+        },
+        {
+          "audio_file": "/path/to/DEMO-NOT-REAL.wav",
+          "start": 3.0,
+          "end": 5.0
+        }
+      ]
+    },
+    {
+      "name": "示例发言人乙",
+      "anchors": [
+        {
+          "audio_file": "/path/to/DEMO-NOT-REAL.wav",
+          "start": 0.0,
+          "end": 2.0
+        },
+        {
+          "audio_file": "/path/to/DEMO-NOT-REAL.wav",
+          "start": 3.0,
+          "end": 5.0
+        }
+      ]
+    }
+  ]
+}
